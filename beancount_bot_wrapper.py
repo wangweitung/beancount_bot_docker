@@ -42,16 +42,44 @@ import datetime
 # 保存原始 create 方法
 _original_create = TransactionManager.create
 
-def _patched_create(self, entry_str: str, tags: list = None, **kwargs) -> str:
+def _patched_create(self, entry_str, tags: list = None, **kwargs) -> str:
     """使用交易日期生成文件路径"""
-    # 从交易文本中提取日期
-    match = re.match(r'^(\\d{4})-(\\d{2})-(\\d{2})', entry_str.strip())
-    if match:
-        year = int(match.group(1))
-        month = int(match.group(2))
+    # entry_str 可能是 Transaction 对象或字符串
+    if hasattr(entry_str, 'date'):
+        # 是 Transaction 对象
+        date = entry_str.date
+        year = date.year
+        month = date.month
+        print(f"[PATCH] Extracted date from Transaction object: {year}-{month:02d}")
+    elif hasattr(entry_str, 'meta') and 'date' in entry_str.meta:
+        # 从 meta 中提取日期
+        date_str = entry_str.meta['date']
+        match = re.match(r'^(\\d{4})-(\\d{2})', str(date_str))
+        if match:
+            year = int(match.group(1))
+            month = int(match.group(2))
+            print(f"[PATCH] Extracted date from meta: {year}-{month:02d}")
+        else:
+            now = datetime.datetime.now()
+            year, month = now.year, now.month
+            print(f"[PATCH] Using current date: {year}-{month:02d}")
     else:
-        now = datetime.datetime.now()
-        year, month = now.year, now.month
+        # 尝试作为字符串处理
+        try:
+            text = str(entry_str)
+            match = re.match(r'^(\\d{4})-(\\d{2})', text)
+            if match:
+                year = int(match.group(1))
+                month = int(match.group(2))
+                print(f"[PATCH] Extracted date from string: {year}-{month:02d}")
+            else:
+                now = datetime.datetime.now()
+                year, month = now.year, now.month
+                print(f"[PATCH] Using current date: {year}-{month:02d}")
+        except:
+            now = datetime.datetime.now()
+            year, month = now.year, now.month
+            print(f"[PATCH] Using current date: {year}-{month:02d}")
     
     # 使用交易日期格式化路径
     beancount_file = self.beancount_file.format(
