@@ -7,6 +7,6 @@ if (ls /init.d/*.sh 1> /dev/null 2>&1); then
 		sh "$f" 
 	done
 fi
-    
-echo "=> Start Beancount bot"
-beancount_bot --config $BEANCOUNT_BOT_CONFIG
+
+echo "=> Start Beancount bot with transaction date patch"
+python3 /app/beancount_bot_wrapper.py --config $BEANCOUNT_BOT_CONFIG

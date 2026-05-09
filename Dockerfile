@@ -10,7 +10,11 @@ RUN apk add --update --no-cache --virtual .build-deps gcc libc-dev libxml2-dev l
 VOLUME ["/config", "/bean"]
 
 ENV BEANCOUNT_BOT_CONFIG /config/beancount_bot.yml
-ENV PYTHONPATH /config
+ENV PYTHONPATH /config:/app
+
+# Add transaction patch and wrapper
+ADD transaction_patch.py /app/transaction_patch.py
+ADD beancount_bot_wrapper.py /app/beancount_bot_wrapper.py
 
 ADD docker-entrypoint.sh /app
 CMD ["/app/docker-entrypoint.sh"]
