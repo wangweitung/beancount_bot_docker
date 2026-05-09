@@ -31,8 +31,10 @@ if not os.path.exists(backup_path):
 if '# PATCHED_BY_WRAPPER' in original_content:
     print("=> [PATCH] transaction.py already patched, skipping...")
 else:
-    # 在文件开头添加补丁代码
-    patch_code = '''# PATCHED_BY_WRAPPER
+    # 在文件末尾添加补丁代码（在 TransactionManager 类定义之后）
+    patch_code = '''
+
+# PATCHED_BY_WRAPPER
 # Auto-patched by beancount_bot_wrapper to use transaction date for file paths
 import re
 import datetime
@@ -77,17 +79,9 @@ def _patched_create(self, entry_str: str, tags: list = None) -> str:
 
 # 替换 create 方法
 TransactionManager.create = _patched_create
-
 '''
-    # 在文件开头插入补丁（在 import 之后）
-    lines = original_content.split('\n')
-    import_idx = 0
-    for i, line in enumerate(lines):
-        if line.startswith('import ') or line.startswith('from '):
-            import_idx = i + 1
-    
-    new_lines = lines[:import_idx] + [''] + patch_code.split('\n') + lines[import_idx:]
-    new_content = '\n'.join(new_lines)
+    # 追加到文件末尾
+    new_content = original_content + patch_code
     
     with open(transaction_path, 'w', encoding='utf-8') as f:
         f.write(new_content)
