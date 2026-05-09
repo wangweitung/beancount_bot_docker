@@ -7,9 +7,13 @@ import re
 import datetime
 from typing import Tuple, List
 
+print("[PATCH] Loading transaction_patch.py...")
+
 # 保存原始模块引用
 import beancount_bot.transaction as _orig_transaction
 import beancount_bot.util as _util
+
+print(f"[PATCH] Original TransactionManager: {_orig_transaction.TransactionManager}")
 
 # 保存原始类
 _OriginalTransactionManager = _orig_transaction.TransactionManager
@@ -29,25 +33,32 @@ class TransactionManager(_OriginalTransactionManager):
         if match:
             year = int(match.group(1))
             month = int(match.group(2))
+            print(f"[PATCH] Extracted date from entry: {year}-{month:02d}")
             return year, month
         # 如果无法解析，使用当前日期
         now = datetime.datetime.now()
+        print(f"[PATCH] Failed to extract date, using current: {now.year}-{now.month:02d}")
         return now.year, now.month
 
     def _format_path_with_date(self, path_template: str, year: int, month: int) -> str:
         """
         使用指定的年月格式化路径模板
         """
-        return path_template.format(
+        result = path_template.format(
             year=str(year),
             month=f"{month:02d}",
             date=f"{year}-{month:02d}"
         )
+        print(f"[PATCH] Formatted path: {path_template} -> {result}")
+        return result
 
     def create(self, entry_str: str, tags: List[str] = None) -> str:
         """
         创建交易，使用交易日期生成文件路径
         """
+        print(f"[PATCH] TransactionManager.create() called")
+        print(f"[PATCH] Entry: {entry_str[:50]}...")
+        
         # 获取交易日期
         year, month = self._get_transaction_date_from_entry(entry_str)
         
@@ -74,7 +85,12 @@ class TransactionManager(_OriginalTransactionManager):
 # 替换原始类
 _orig_transaction.TransactionManager = TransactionManager
 
+print(f"[PATCH] New TransactionManager: {_orig_transaction.TransactionManager}")
+
 # 确保其他引用也更新
 import beancount_bot.bot as _bot
 if hasattr(_bot, 'TransactionManager'):
     _bot.TransactionManager = TransactionManager
+    print("[PATCH] Updated _bot.TransactionManager")
+
+print("[PATCH] TransactionManager patched successfully!")

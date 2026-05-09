@@ -9,4 +9,6 @@ if (ls /init.d/*.sh 1> /dev/null 2>&1); then
 fi
 
 echo "=> Start Beancount bot with transaction date patch"
+echo "=> PYTHONPATH: $PYTHONPATH"
+echo "=> Config: $BEANCOUNT_BOT_CONFIG"
 python3 /app/beancount_bot_wrapper.py
