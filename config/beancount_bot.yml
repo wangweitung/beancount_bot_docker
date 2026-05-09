@@ -1,6 +1,6 @@
 log:
-  # 日志等级
-  level: 'INFO'
+  # 日志等级（DEBUG/INFO/WARNING/ERROR）
+  level: '${LOG_LEVEL:-INFO}'
 
 bot:
   # 代理配置（从环境变量读取，空值表示不使用代理）
@@ -13,12 +13,12 @@ bot:
   auth_token: '${AUTH_TOKEN}'
 
   # 机器人会话文件路径（用于保存登录状态）
-  session_file: '/app/bot.session'
+  session_file: '${SESSION_FILE:-/app/bot.session}'
 
 transaction:
-  # 账本文件。可以使用：{year}、{month}、{date}
+  # 账本文件路径。支持变量：{year}、{month}、{date}
   # 自动按年月分文件夹存储
-  beancount_file: '/bean/{year}-{month}月/{month}月交易.bean'
+  beancount_file: '${BEANCOUNT_FILE:-/bean/{year}-{month}月/{month}月交易.bean}'
 
   # 消息处理器
   message_dispatcher:
@@ -27,7 +27,7 @@ transaction:
     # 目前内建了模板处理器，配置如下即可
     - class: 'auto_format_dispatcher.AutoFormatDispatcher'
       args:
-        template_config: '/config/template.yml'
+        template_config: '${TEMPLATE_CONFIG:-/config/template.yml}'
 
   # 添加在交易上的标签（已改为由 auto_format_dispatcher 动态添加）
   tags: []
@@ -38,8 +38,8 @@ schedule:
   - name: price
     class: 'beancount_bot.builtin.DailyCommandTask'
     args:
-      time: '${PRICE_TIME:-21:30}' 
-      message: '价格更新完成'
+      time: '${PRICE_TIME:-21:30}'
+      message: '${PRICE_DONE_MESSAGE:-价格更新完成}'
       commands:
         - 'cd /config && python stock_price_cn.py'
         - 'export https_proxy=${PROXY_URL} && cd /config && python stock_price_usa.py'
