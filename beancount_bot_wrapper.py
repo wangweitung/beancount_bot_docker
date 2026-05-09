@@ -1,91 +1,99 @@
 #!/usr/bin/env python3
 """
 Beancount Bot Wrapper - 使用交易日期保存到对应年月文件夹
+通过直接修改 transaction.py 文件来实现
 """
 import sys
 import os
+
+print("=> [PATCH] Starting beancount_bot with patched transaction module...")
+
+# 获取 beancount_bot 的安装路径
+import beancount_bot
+beancount_bot_path = os.path.dirname(beancount_bot.__file__)
+transaction_path = os.path.join(beancount_bot_path, 'transaction.py')
+
+print(f"=> [PATCH] beancount_bot path: {beancount_bot_path}")
+print(f"=> [PATCH] transaction.py path: {transaction_path}")
+
+# 读取原始 transaction.py
+with open(transaction_path, 'r', encoding='utf-8') as f:
+    original_content = f.read()
+
+# 创建备份（如果不存在）
+backup_path = transaction_path + '.original'
+if not os.path.exists(backup_path):
+    with open(backup_path, 'w', encoding='utf-8') as f:
+        f.write(original_content)
+    print(f"=> [PATCH] Created backup: {backup_path}")
+
+# 检查是否已经打过补丁
+if '# PATCHED_BY_WRAPPER' in original_content:
+    print("=> [PATCH] transaction.py already patched, skipping...")
+else:
+    # 在文件开头添加补丁代码
+    patch_code = '''# PATCHED_BY_WRAPPER
+# Auto-patched by beancount_bot_wrapper to use transaction date for file paths
 import re
 import datetime
-from typing import Tuple, List
 
-print("=> [PATCH] Loading wrapper with monkey patch...")
+# 保存原始 create 方法
+_original_create = TransactionManager.create
 
-# 先导入 beancount_bot，然后进行 monkey patch
-from beancount_bot import transaction
-from beancount_bot import util
-
-# 保存原始类
-_OriginalTransactionManager = transaction.TransactionManager
-
-class TransactionManager(_OriginalTransactionManager):
-    """
-    重写 TransactionManager，使用交易日期而不是当前日期来生成文件路径
-    """
-
-    def _get_transaction_date_from_entry(self, entry_str: str) -> Tuple[int, int]:
-        """从交易文本中提取日期 (YYYY-MM-DD)"""
-        match = re.match(r'^(\d{4})-(\d{2})-(\d{2})', entry_str.strip())
-        if match:
-            year = int(match.group(1))
-            month = int(match.group(2))
-            print(f"[PATCH] Extracted date: {year}-{month:02d}")
-            return year, month
+def _patched_create(self, entry_str: str, tags: list = None) -> str:
+    """使用交易日期生成文件路径"""
+    # 从交易文本中提取日期
+    match = re.match(r'^(\\d{4})-(\\d{2})-(\\d{2})', entry_str.strip())
+    if match:
+        year = int(match.group(1))
+        month = int(match.group(2))
+    else:
         now = datetime.datetime.now()
-        print(f"[PATCH] Using current date: {now.year}-{now.month:02d}")
-        return now.year, now.month
-
-    def _format_path_with_date(self, path_template: str, year: int, month: int) -> str:
-        """使用指定的年月格式化路径模板"""
-        result = path_template.format(
-            year=str(year),
-            month=f"{month:02d}",
-            date=f"{year}-{month:02d}"
-        )
-        print(f"[PATCH] Path: {path_template} -> {result}")
+        year, month = now.year, now.month
+    
+    # 使用交易日期格式化路径
+    beancount_file = self.beancount_file.format(
+        year=str(year),
+        month=f"{month:02d}",
+        date=f"{year}-{month:02d}"
+    )
+    
+    # 确保目录存在
+    dir_path = os.path.dirname(beancount_file)
+    if dir_path and not os.path.exists(dir_path):
+        os.makedirs(dir_path, exist_ok=True)
+        print(f"[PATCH] Created directory: {dir_path}")
+    
+    # 临时修改路径
+    original_path = self.beancount_file
+    self.beancount_file = beancount_file
+    
+    try:
+        result = _original_create(self, entry_str, tags)
+        print(f"[PATCH] Saved to: {beancount_file} (date: {year}-{month:02d})")
         return result
+    finally:
+        self.beancount_file = original_path
 
-    def create(self, entry_str: str, tags: List[str] = None) -> str:
-        """创建交易，使用交易日期生成文件路径"""
-        print(f"[PATCH] create() called for: {entry_str[:50]}...")
-        
-        # 获取交易日期
-        year, month = self._get_transaction_date_from_entry(entry_str)
-        
-        # 使用交易日期格式化路径
-        beancount_file = self._format_path_with_date(self.beancount_file, year, month)
-        
-        # 确保目录存在
-        dir_path = os.path.dirname(beancount_file)
-        if dir_path and not os.path.exists(dir_path):
-            os.makedirs(dir_path, exist_ok=True)
-            print(f"[PATCH] Created directory: {dir_path}")
-        
-        # 添加标签
-        if tags is None:
-            tags = []
-        
-        # 临时修改路径，调用父类方法
-        original_path = self.beancount_file
-        self.beancount_file = beancount_file
-        
-        try:
-            result = _OriginalTransactionManager.create(self, entry_str, tags)
-            util.logger.info(f"[PATCH] Saved to: {beancount_file} (date: {year}-{month:02d})")
-            return result
-        finally:
-            self.beancount_file = original_path
+# 替换 create 方法
+TransactionManager.create = _patched_create
 
-
-# 替换原始类
-transaction.TransactionManager = TransactionManager
-print(f"[PATCH] TransactionManager patched: {transaction.TransactionManager}")
-
-# 确保其他引用也更新
-from beancount_bot import bot
-if hasattr(bot, 'TransactionManager'):
-    bot.TransactionManager = TransactionManager
+'''
+    # 在文件开头插入补丁（在 import 之后）
+    lines = original_content.split('\n')
+    import_idx = 0
+    for i, line in enumerate(lines):
+        if line.startswith('import ') or line.startswith('from '):
+            import_idx = i + 1
+    
+    new_lines = lines[:import_idx] + [''] + patch_code.split('\n') + lines[import_idx:]
+    new_content = '\n'.join(new_lines)
+    
+    with open(transaction_path, 'w', encoding='utf-8') as f:
+        f.write(new_content)
+    
+    print(f"=> [PATCH] Patched transaction.py")
 
 # 现在启动 beancount_bot
-print("=> Starting Beancount bot...")
-from beancount_bot.__main__ import main
-main()
+print("=> Starting beancount_bot...")
+os.system("beancount_bot --config $BEANCOUNT_BOT_CONFIG")
