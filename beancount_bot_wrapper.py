@@ -27,14 +27,20 @@ if not os.path.exists(backup_path):
         f.write(original_content)
     print(f"=> [PATCH] Created backup: {backup_path}")
 
-# 检查是否已经打过补丁
-if '# PATCHED_BY_WRAPPER' in original_content:
+# 检查是否已经打过补丁（使用新的标记）
+if '# PATCHED_BY_WRAPPER_V2' in original_content:
     print("=> [PATCH] transaction.py already patched, skipping...")
 else:
+    # 先恢复原始文件（如果之前有旧补丁）
+    if '# PATCHED_BY_WRAPPER' in original_content and os.path.exists(backup_path):
+        with open(backup_path, 'r', encoding='utf-8') as f:
+            original_content = f.read()
+        print("=> [PATCH] Restored original file from backup")
+    
     # 在文件末尾添加补丁代码（在 TransactionManager 类定义之后）
     patch_code = '''
 
-# PATCHED_BY_WRAPPER
+# PATCHED_BY_WRAPPER_V2
 # Auto-patched by beancount_bot_wrapper to use transaction date for file paths
 import re
 import datetime
@@ -81,29 +87,29 @@ def _patched_create(self, entry_str, tags: list = None, **kwargs) -> str:
             year, month = now.year, now.month
             print(f"[PATCH] Using current date: {year}-{month:02d}")
     
-    # 使用交易日期格式化路径
-    beancount_file = self.beancount_file.format(
+    # 使用交易日期格式化路径（使用 bean_file 而不是 beancount_file）
+    bean_file = self.bean_file.format(
         year=str(year),
         month=f"{month:02d}",
         date=f"{year}-{month:02d}"
     )
     
     # 确保目录存在
-    dir_path = os.path.dirname(beancount_file)
+    dir_path = os.path.dirname(bean_file)
     if dir_path and not os.path.exists(dir_path):
         os.makedirs(dir_path, exist_ok=True)
         print(f"[PATCH] Created directory: {dir_path}")
     
     # 临时修改路径
-    original_path = self.beancount_file
-    self.beancount_file = beancount_file
+    original_path = self.bean_file
+    self.bean_file = bean_file
     
     try:
         result = _original_create(self, entry_str, tags, **kwargs)
-        print(f"[PATCH] Saved to: {beancount_file} (date: {year}-{month:02d})")
+        print(f"[PATCH] Saved to: {bean_file} (date: {year}-{month:02d})")
         return result
     finally:
-        self.beancount_file = original_path
+        self.bean_file = original_path
 
 # 替换 create 方法
 TransactionManager.create = _patched_create
