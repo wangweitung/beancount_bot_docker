@@ -42,7 +42,7 @@ import datetime
 # 保存原始 create 方法
 _original_create = TransactionManager.create
 
-def _patched_create(self, entry_str: str, tags: list = None) -> str:
+def _patched_create(self, entry_str: str, tags: list = None, **kwargs) -> str:
     """使用交易日期生成文件路径"""
     # 从交易文本中提取日期
     match = re.match(r'^(\\d{4})-(\\d{2})-(\\d{2})', entry_str.strip())
@@ -71,7 +71,7 @@ def _patched_create(self, entry_str: str, tags: list = None) -> str:
     self.beancount_file = beancount_file
     
     try:
-        result = _original_create(self, entry_str, tags)
+        result = _original_create(self, entry_str, tags, **kwargs)
         print(f"[PATCH] Saved to: {beancount_file} (date: {year}-{month:02d})")
         return result
     finally:
