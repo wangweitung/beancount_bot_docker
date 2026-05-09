@@ -1,12 +1,47 @@
-version: '3'
+version: '3.8'
+
 services:
-  beancount_bot:
-    image: kaaass/beancount_bot_docker
-    container_name: 'beancount_bot'
-    restart: always
+  beancount-bot:
+    build: .
+    # 使用你自己的 Docker Hub 用户名，或本地构建时注释掉 image 行
+    image: ${DOCKER_USERNAME:-yourusername}/beancount_bot_docker:latest
+    container_name: beancount-bot
+    restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai
+      # 基础配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Telegram 配置
+      - TG_TOKEN=${TG_TOKEN}
+      - TG_CHAT_ID=${TG_CHAT_ID}
+      - TG_PROXY=${TG_PROXY:-}
+      # Gotify 配置
+      - GOTIFY_URL=${GOTIFY_URL:-}
+      - GOTIFY_TOKEN=${GOTIFY_TOKEN:-}
+      - GOTIFY_PRIORITY=${GOTIFY_PRIORITY:-5}
+      # 推送配置
+      - NOTIFY_TARGETS=${NOTIFY_TARGETS:-telegram}
+      # 代理配置
+      - PROXY_URL=${PROXY_URL:-}
+      - https_proxy=${PROXY_URL:-}
+      # 鉴权配置
+      - AUTH_TOKEN=${AUTH_TOKEN}
+      # 文件路径配置
+      - SESSION_FILE=${SESSION_FILE:-/app/bot.session}
+      - BEANCOUNT_FILE=${BEANCOUNT_FILE:-/bean/{year}-{month}月/{month}月交易.bean}
+      - TEMPLATE_CONFIG=${TEMPLATE_CONFIG:-/config/template.yml}
+      # 定时任务配置
+      - PRICE_TIME=${PRICE_TIME:-21:30}
+      - PRICE_DONE_MESSAGE=${PRICE_DONE_MESSAGE:-价格更新完成}
     volumes:
       - ./bean:/bean
       - ./config:/config
-      - ./init.d:/init.d
+      - ./bot.session:/app/bot.session
+      # 可选：自定义入口脚本
+      # - ./init.d:/init.d
+    networks:
+      - beancount-network
+
+networks:
+  beancount-network:
+    driver: bridge
