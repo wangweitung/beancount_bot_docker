@@ -3,51 +3,44 @@ log:
   level: 'INFO'
 
 bot:
-  # 代理，若无 Telegram 连接问题可删去
-  proxy: ''
+  # 代理配置（从环境变量读取，空值表示不使用代理）
+  proxy: '${TG_PROXY:-}'
 
   # Telegram 机器人 Token
-  token: ''
+  token: '${TG_TOKEN}'
+  
+  # 鉴权用令牌。第一次进入机器人时用于校验身份
+  auth_token: '${AUTH_TOKEN}'
 
-  # 鉴权用令牌。第一次进入机器人时（即 /start 后）用于校验身份
-  auth_token: '123456'
-
-  # 机器人会话文件路径。用于存储鉴权状态、用户特有配置等等
-  session_file: '/config/bot.session'
+  # 机器人会话文件路径（用于保存登录状态）
+  session_file: '/app/bot.session'
 
 transaction:
   # 账本文件。可以使用：{year}、{month}、{date}
-  beancount_file: '/bean/{year}/{month}.bean'
+  # 自动按年月分文件夹存储
+  beancount_file: '/bean/{year}-{month}月/{month}月交易.bean'
 
   # 消息处理器
   message_dispatcher:
     # class 必须包含完整模块名，第三方插件可以设置 PYTHONPATH 载入
     # args 参考每个处理器各自的文档
     # 目前内建了模板处理器，配置如下即可
-    - class: 'beancount_bot.builtin.TemplateDispatcher'
+    - class: 'auto_format_dispatcher.AutoFormatDispatcher'
       args:
         template_config: '/config/template.yml'
 
-  # 添加在交易上的标签
-  # 可以使用 Bot 指令 /set tags <标签名> 添加用户专用标签
-  tags:
-    - beancount-bot
+  # 添加在交易上的标签（已改为由 auto_format_dispatcher 动态添加）
+  tags: []
 
 schedule:
   # 定时任务定义
-  # name：定时任务名，可以用 /task name 主动触发
-  # class：定时任务类
-  # args：创建任务需要的参数
 
-  # 定时任务示例：使用 bean-price 定时更新价格
-  # 使用内建任务类：beancount_bot.builtin.DailyCommandTask
-  # 该类在每日 time 时执行指令，之后广播 message 消息
-  # 详细的关于 bean-price 的配置方式可参考官方文档：https://beancount.github.io/docs/fetching_prices_in_beancount.html
   - name: price
     class: 'beancount_bot.builtin.DailyCommandTask'
     args:
-      time: '21:30'
-      message: '当日价格更新完成'
+      time: '${PRICE_TIME:-21:30}' 
+      message: '价格更新完成'
       commands:
-        - 'bean-price /bean/main.bean >> /bean/automatic/prices.bean'
-
+        - 'cd /config && python stock_price_cn.py'
+        - 'export https_proxy=${PROXY_URL} && cd /config && python stock_price_usa.py'
+        - 'cd /config && python stock_price_clean.py'
