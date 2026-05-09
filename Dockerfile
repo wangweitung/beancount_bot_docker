@@ -4,13 +4,13 @@ WORKDIR /app
 ADD requirements.txt /app
 
 RUN apk add --update --no-cache --virtual .build-deps gcc libc-dev libxml2-dev libxml2 libxslt-dev && \
-    pip install --no-cache-dir -r requirements.txt && \
-	apk del .build-deps
+    pip install --no-cache-dir --break-system-packages -r requirements.txt && \
+    apk del .build-deps
 
 VOLUME ["/config", "/bean"]
 
-ENV BEANCOUNT_BOT_CONFIG /config/beancount_bot.yml
-ENV PYTHONPATH /config:/app
+ENV BEANCOUNT_BOT_CONFIG=/config/beancount_bot.yml
+ENV PYTHONPATH=/config:/app
 
 # Add transaction patch and wrapper
 ADD transaction_patch.py /app/transaction_patch.py
