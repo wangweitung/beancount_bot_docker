@@ -11,28 +11,19 @@
 3. `PATCH_README.md` - 补丁说明文档
 
 ### 修改文件
-1. `Dockerfile` - 使用 python:3.9-slim 替代 alpine，添加 patch 文件
+1. `Dockerfile` - 使用 python:3.9-slim，添加 patch 文件
 2. `docker-entrypoint.sh` - 使用 wrapper 启动
 3. `.github/workflows/docker-publish.yml` - 更新到最新 action 版本
 
-## 测试步骤
+## 修复记录
 
-1. 构建镜像：
-   ```bash
-   docker build -t your-username/beancount_bot_docker:test .
-   ```
+### v1.2.2-2
+- 修复：使用 `os.system()` 调用 beancount_bot 命令行，而非导入 __main__
 
-2. 本地测试：
-   ```bash
-   docker run -v ./wwd:/bean -v ./config:/config your-username/beancount_bot_docker:test
-   ```
-
-3. 发送测试交易（如日期为 2026-08-05），验证是否保存到 `2026-08月` 文件夹
+### v1.2.2-1
+- 修复：使用 python:3.9-slim 替代 alpine 解决编译问题
 
 ## 发布步骤
 
 1. 提交并推送代码到 GitHub
-2. 在 GitHub 仓库设置中添加 Secrets：
-   - `DOCKER_USERNAME`
-   - `DOCKER_PASSWORD`
-3. 创建 Release，GitHub Actions 会自动构建并推送
+2. 创建 Release，GitHub Actions 会自动构建并推送
