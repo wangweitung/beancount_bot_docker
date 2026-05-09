@@ -11,7 +11,7 @@
 3. `PATCH_README.md` - 补丁说明文档
 
 ### 修改文件
-1. `Dockerfile` - 添加 patch 文件和 wrapper
+1. `Dockerfile` - 使用 python:3.9-slim 替代 alpine，添加 patch 文件
 2. `docker-entrypoint.sh` - 使用 wrapper 启动
 3. `.github/workflows/docker-publish.yml` - 更新到最新 action 版本
 

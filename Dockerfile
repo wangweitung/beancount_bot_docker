@@ -1,11 +1,14 @@
-FROM python:3.9-alpine
+FROM python:3.9-slim
 
 WORKDIR /app
 ADD requirements.txt /app
 
-RUN apk add --update --no-cache --virtual .build-deps gcc libc-dev libxml2-dev libxml2 libxslt-dev && \
-    pip install --no-cache-dir --break-system-packages -r requirements.txt && \
-    apk del .build-deps
+# 安装编译依赖，然后安装 Python 包，最后清理
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libc6-dev libxml2-dev libxslt1-dev && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get purge -y --auto-remove gcc libc6-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 VOLUME ["/config", "/bean"]
 
